@@ -26,7 +26,7 @@ const formSchema = z.object({
     fid: z.string().optional(),
     abbreviation: z.string().optional(),
     description: z.string().optional(),
-    districtId: z.coerce.number().min(1, "District is required"),
+    districtId: z.number().min(1, "District is required"),
 })
 
 interface IcsFormProps {
@@ -110,7 +110,10 @@ export function IcsForm({ ics, districts, open: controlledOpen, onOpenChange }: 
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>District</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined} value={field.value ? String(field.value) : undefined}>
+                                    <Select
+                                        onValueChange={(value) => field.onChange(parseInt(value))}
+                                        value={field.value ? String(field.value) : undefined}
+                                    >
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select a district" />
