@@ -1,12 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+import { DashboardBreadcrumb } from "./dashboard-breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
     SidebarInset,
@@ -16,6 +9,8 @@ import {
 import { NavUser } from "@/components/nav-user"
 import { ModeToggle } from "@/components/mode-toggle"
 import { getMenu } from "@/app/actions/get-menu"
+import { getDistricts } from "@/app/actions/district"
+import { getIcs } from "@/app/actions/ics"
 import { auth } from "@/auth"
 
 export default async function DashboardLayout({
@@ -25,14 +20,26 @@ export default async function DashboardLayout({
 }) {
     const menus = await getMenu()
     const session = await auth()
+    const districts = await getDistricts()
+    const icsList = await getIcs()
+
+    // Group ICS by district
+    const districtsWithIcs = districts.map(district => ({
+        ...district,
+        ics: icsList.filter(ics => ics.districtId === district.id)
+    }))
 
     return (
         <SidebarProvider>
-            <AppSidebar menus={menus} user={{
-                name: session?.user?.name || "User",
-                email: session?.user?.email || "user@example.com",
-                avatar: session?.user?.image || "/avatars/shadcn.jpg",
-            }} />
+            <AppSidebar
+                menus={menus}
+                districts={districtsWithIcs}
+                user={{
+                    name: session?.user?.name || "User",
+                    email: session?.user?.email || "user@example.com",
+                    avatar: session?.user?.image || "/avatars/shadcn.jpg",
+                }}
+            />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
                     <div className="flex items-center gap-2 px-4">
@@ -41,19 +48,7 @@ export default async function DashboardLayout({
                             orientation="vertical"
                             className="mr-2 data-[orientation=vertical]:h-4"
                         />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="#">
-                                        Building Your Application
-                                    </BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
+                        <DashboardBreadcrumb menus={menus} districts={districtsWithIcs} />
                     </div>
                     <div className="ml-auto flex items-center gap-2 px-4">
                         <NavUser user={{

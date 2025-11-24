@@ -5,62 +5,80 @@ const prisma = new PrismaClient()
 export async function seedMenu() {
     console.log('Seeding Menus...')
 
-    // Clean up existing menus to avoid duplicates if running multiple times (optional, but good for idempotency)
-    // await prisma.menu.deleteMany({}) 
-    // For now, we'll just upsert or check existence to be safe, but simpler to just create if empty.
+    // Delete all existing menus and user menu assignments
+    await prisma.userMenu.deleteMany({})
+    await prisma.menu.deleteMany({})
+    console.log('  - Existing menus cleared.')
 
-    // Check if menus exist
-    const count = await prisma.menu.count()
-    if (count > 0) {
-        console.log('  - Menus already exist. Skipping creation.')
-    } else {
-        // Dashboard
-        const dashboard = await prisma.menu.create({
-            data: {
-                title: 'Dashboard',
-                url: '#',
-                icon: 'PieChart',
-                order: 1,
-            },
-        })
+    // Dashboard
+    const dashboard = await prisma.menu.create({
+        data: {
+            title: 'Dashboard',
+            url: '#',
+            icon: 'PieChart',
+            order: 1,
+        },
+    })
 
+    await prisma.menu.create({
+        data: {
+            title: 'Workplan Tracker',
+            url: '/dashboard/workplan',
+            parentId: dashboard.id,
+            order: 1,
+        },
+    })
+
+    // Master Data
+    const masterData = await prisma.menu.create({
+        data: {
+            title: 'Master Data',
+            url: '#',
+            icon: 'Map',
+            order: 2,
+        },
+    })
+
+    const masterItems = [
+        { title: 'District', url: '/dashboard/district', order: 1 },
+        { title: 'ICS', url: '/dashboard/ics', order: 2 },
+        { title: 'Outcome', url: '/dashboard/outcome', order: 3 },
+        { title: 'Output', url: '/dashboard/output', order: 4 },
+        { title: 'Activity', url: '/dashboard/activity', order: 5 },
+        { title: 'Activity Tracker', url: '/dashboard/activity-tracker', order: 6 },
+        { title: 'Project Periode', url: '/dashboard/project-periode', order: 7 },
+        { title: 'User', url: '/dashboard/user', order: 8 },
+    ]
+
+    for (const item of masterItems) {
         await prisma.menu.create({
             data: {
-                title: 'Workplan Tracker',
-                url: '/dashboard/workplan',
-                parentId: dashboard.id,
-                order: 1,
+                ...item,
+                parentId: masterData.id,
             },
         })
-
-        // Master Data
-        const masterData = await prisma.menu.create({
-            data: {
-                title: 'Master Data',
-                url: '#',
-                icon: 'Map',
-                order: 2,
-            },
-        })
-
-        const masterItems = [
-            { title: 'District', url: '/dashboard/district', order: 1 },
-            { title: 'ICS', url: '/dashboard/ics', order: 2 },
-            { title: 'Outcome', url: '/dashboard/outcome', order: 3 },
-            { title: 'Output', url: '/dashboard/output', order: 4 },
-            { title: 'Activity', url: '/dashboard/activity', order: 5 },
-        ]
-
-        for (const item of masterItems) {
-            await prisma.menu.create({
-                data: {
-                    ...item,
-                    parentId: masterData.id,
-                },
-            })
-        }
-        console.log('  - Menus created.')
     }
+
+    // Tracker
+    const tracker = await prisma.menu.create({
+        data: {
+            title: 'Tracker',
+            url: '#',
+            icon: 'ClipboardList',
+            order: 3,
+        },
+    })
+
+    await prisma.menu.create({
+        data: {
+            title: '1st SOW',
+            url: '/dashboard/tracker/1st-sow',
+            parentId: tracker.id,
+            order: 1,
+        },
+    })
+
+    console.log('  - Menus created.')
 
     // Assign Menus to Admin
     console.log('Assigning Menus to Admin...')
