@@ -12,10 +12,28 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Edit, Trash2, Plus, Check, X } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Edit, Trash2, Plus, Check, X, Settings2 } from "lucide-react"
 import { deleteActTracker, updateActTracker } from "@/app/actions/acttracker"
 import { useRouter } from "next/navigation"
 import { ActTrackerFormDialog } from "./acttracker-form-dialog"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+
+function htmlToPlain(html: string) {
+    if (!html) return ""
+    const el = document.createElement("div")
+    el.innerHTML = html
+    return (el.textContent || el.innerText || "").trim()
+}
+
+// no sanitizer needed for inline preview; we render plain text in table
 
 interface ActTracker {
     id: number
@@ -28,6 +46,7 @@ interface ActTracker {
     activity?: {
         name: string
     }
+    note?: string | null
 }
 
 interface ActTrackerTableProps {
@@ -36,8 +55,18 @@ interface ActTrackerTableProps {
 
 interface EditingCell {
     id: number
-    field: 'deadline' | 'plan' | 'actual'
+    field: 'deadline' | 'plan' | 'actual' | 'note'
     value: string
+}
+
+interface ColumnVisibility {
+    code: boolean
+    activity: boolean
+    period: boolean
+    deadline: boolean
+    plan: boolean
+    actual: boolean
+    note: boolean
 }
 
 export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
@@ -47,6 +76,20 @@ export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
     const [searchValue, setSearchValue] = useState<string>("")
     const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
     const router = useRouter()
+
+    const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
+        code: true,
+        activity: true,
+        period: true,
+        deadline: true,
+        plan: true,
+        actual: true,
+        note: false,
+    })
+
+    const toggleColumn = (column: keyof ColumnVisibility) => {
+        setColumnVisibility(prev => ({ ...prev, [column]: !prev[column] }))
+    }
 
     const handleEdit = (tracker: ActTracker) => {
         setSelectedTracker(tracker)
@@ -60,8 +103,11 @@ export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
         }
     }
 
-    const handleDoubleClick = (tracker: ActTracker, field: 'deadline' | 'plan' | 'actual') => {
-        const value = field === 'deadline' ? tracker.deadline : tracker[field].toString()
+    const handleDoubleClick = (tracker: ActTracker, field: 'deadline' | 'plan' | 'actual' | 'note') => {
+        let value = ''
+        if (field === 'deadline') value = tracker.deadline
+        else if (field === 'note') value = tracker.note ?? ''
+        else value = tracker[field].toString()
         setEditingCell({ id: tracker.id, field, value })
     }
 
@@ -82,6 +128,7 @@ export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
             deadline: editingCell.field === 'deadline' ? editingCell.value : tracker.deadline,
             plan: editingCell.field === 'plan' ? BigInt(editingCell.value) : tracker.plan,
             actual: editingCell.field === 'actual' ? BigInt(editingCell.value) : tracker.actual,
+            note: editingCell.field === 'note' ? editingCell.value : (tracker.note ?? null),
         }
         await updateActTracker(tracker.id, data)
         setEditingCell(null)
@@ -103,11 +150,26 @@ export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
         setEditingCell(null)
     }
 
-    const renderEditableCell = (tracker: ActTracker, field: 'deadline' | 'plan' | 'actual', className: string = "") => {
+    const renderEditableCell = (tracker: ActTracker, field: 'deadline' | 'plan' | 'actual' | 'note', className: string = "") => {
         const isEditing = editingCell?.id === tracker.id && editingCell?.field === field;
-        const value = field === 'deadline' ? tracker.deadline : tracker[field].toString();
+        const value = field === 'deadline' ? tracker.deadline : field === 'note' ? htmlToPlain(tracker.note || '-') : (tracker as any)[field].toString();
 
         if (isEditing) {
+            if (field === 'note') {
+                return (
+                    <div className="flex flex-col gap-2 max-w-[380px]">
+                        <RichTextEditor
+                            value={editingCell.value}
+                            onChange={(v) => setEditingCell({ ...editingCell, value: v })}
+                            placeholder="Edit note..."
+                        />
+                        <div className="flex gap-1 justify-end">
+                            <Button size="sm" variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                            <Button size="sm" onClick={handleSaveCell}>Save</Button>
+                        </div>
+                    </div>
+                )
+            }
             return (
                 <div className="flex items-center gap-1">
                     <Input
@@ -128,6 +190,19 @@ export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
             );
         }
 
+        if (field === 'note') {
+            const plain = htmlToPlain(tracker.note || '-')
+            return (
+                <div
+                    className={`cursor-pointer hover:bg-muted/50 px-2 py-1 rounded whitespace-pre-wrap overflow-hidden ${className}`}
+                    style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                    onDoubleClick={() => handleDoubleClick(tracker, 'note')}
+                    title={htmlToPlain(tracker.note || '')}
+                >
+                    {plain}
+                </div>
+            )
+        }
         return (
             <div
                 className={`cursor-pointer hover:bg-muted/50 px-2 py-1 rounded ${className}`}
@@ -152,6 +227,8 @@ export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
         return true
     })
 
+    const visibleColumnsCount = Object.values(columnVisibility).filter(Boolean).length + 1 // +1 for actions column
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -173,63 +250,134 @@ export function ActTrackerTable({ actTrackers }: ActTrackerTableProps) {
             </div>
 
             {/* Search Section */}
-            <div className="flex items-center space-x-2">
-                <Select value={searchColumn} onValueChange={setSearchColumn}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Search by..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="code">Code</SelectItem>
-                        <SelectItem value="description">Description</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Input
-                    placeholder={`Search by ${searchColumn === "code" ? "Code" : "Description"}...`}
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    className="max-w-sm"
-                />
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1">
+                    <Select value={searchColumn} onValueChange={setSearchColumn}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Search by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="code">Code</SelectItem>
+                            <SelectItem value="description">Description</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Input
+                        placeholder={`Search by ${searchColumn === "code" ? "Code" : "Description"}...`}
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        className="max-w-sm flex-1"
+                    />
+                </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <Settings2 className="mr-2 h-4 w-4" />
+                            Columns
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[220px]">
+                        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                            checked={columnVisibility.code}
+                            onCheckedChange={() => toggleColumn('code')}
+                        >
+                            Code
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            checked={columnVisibility.activity}
+                            onCheckedChange={() => toggleColumn('activity')}
+                        >
+                            Activity
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            checked={columnVisibility.period}
+                            onCheckedChange={() => toggleColumn('period')}
+                        >
+                            Period
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            checked={columnVisibility.deadline}
+                            onCheckedChange={() => toggleColumn('deadline')}
+                        >
+                            Deadline
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            checked={columnVisibility.plan}
+                            onCheckedChange={() => toggleColumn('plan')}
+                        >
+                            Plan
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            checked={columnVisibility.actual}
+                            onCheckedChange={() => toggleColumn('actual')}
+                        >
+                            Actual
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            checked={columnVisibility.note}
+                            onCheckedChange={() => toggleColumn('note')}
+                        >
+                            Note
+                        </DropdownMenuCheckboxItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[100px]">Code</TableHead>
-                            <TableHead>Activity</TableHead>
-                            <TableHead>Period</TableHead>
-                            <TableHead>Deadline</TableHead>
-                            <TableHead className="text-center">Plan</TableHead>
-                            <TableHead className="text-center">Actual</TableHead>
+                            {columnVisibility.code && <TableHead className="w-[100px]">Code</TableHead>}
+                            {columnVisibility.activity && <TableHead>Activity</TableHead>}
+                            {columnVisibility.period && <TableHead>Period</TableHead>}
+                            {columnVisibility.deadline && <TableHead>Deadline</TableHead>}
+                            {columnVisibility.plan && <TableHead className="text-center">Plan</TableHead>}
+                            {columnVisibility.actual && <TableHead className="text-center">Actual</TableHead>}
+                            {columnVisibility.note && <TableHead>Note</TableHead>}
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredTrackers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={visibleColumnsCount} className="text-center h-24 text-muted-foreground">
                                     No activity trackers found.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredTrackers.map((tracker) => (
                                 <TableRow key={tracker.id}>
-                                    <TableCell className="font-medium">{tracker.actCode}</TableCell>
-                                    <TableCell>
-                                        <div className="font-medium">{tracker.activity?.name}</div>
-                                        <div className="text-xs text-muted-foreground truncate max-w-[300px]">
-                                            {tracker.actDesc}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{tracker.period}</TableCell>
-                                    <TableCell>
-                                        {renderEditableCell(tracker, 'deadline')}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {renderEditableCell(tracker, 'plan', 'text-center')}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {renderEditableCell(tracker, 'actual', 'text-center')}
-                                    </TableCell>
+                                    {columnVisibility.code && (
+                                        <TableCell className="font-medium">{tracker.actCode}</TableCell>
+                                    )}
+                                    {columnVisibility.activity && (
+                                        <TableCell>
+                                            <div className="font-medium">{tracker.activity?.name}</div>
+                                        </TableCell>
+                                    )}
+                                    {columnVisibility.period && (
+                                        <TableCell>{tracker.period}</TableCell>
+                                    )}
+                                    {columnVisibility.deadline && (
+                                        <TableCell>
+                                            {renderEditableCell(tracker, 'deadline')}
+                                        </TableCell>
+                                    )}
+                                    {columnVisibility.plan && (
+                                        <TableCell className="text-center">
+                                            {renderEditableCell(tracker, 'plan', 'text-center')}
+                                        </TableCell>
+                                    )}
+                                    {columnVisibility.actual && (
+                                        <TableCell className="text-center">
+                                            {renderEditableCell(tracker, 'actual', 'text-center')}
+                                        </TableCell>
+                                    )}
+                                    {columnVisibility.note && (
+                                        <TableCell>
+                                            {renderEditableCell(tracker, 'note')}
+                                        </TableCell>
+                                    )}
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
                                             <Button

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { createProjectPeriod, updateProjectPeriod } from "@/app/actions/projectperiod"
 
 interface ProjectPeriod {
@@ -132,10 +133,9 @@ export function ProjectPeriodFormDialog({ period, open, onOpenChange }: ProjectP
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="note">Note</Label>
-                            <Input
-                                id="note"
+                            <RichTextEditor
                                 value={note}
-                                onChange={(e) => setNote(e.target.value)}
+                                onChange={setNote}
                                 placeholder="Optional note"
                             />
                         </div>
