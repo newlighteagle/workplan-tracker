@@ -4,16 +4,22 @@ const prisma = new PrismaClient()
 
 export async function seedUser() {
     console.log('Seeding Users...')
+
+    // Skip user seeding - let Google OAuth create the user on first login
+    console.log('  - Skipping user seed. User will be created on first Google login.')
+
+    /* 
     // Seed Admin User
     const admin = await prisma.user.upsert({
         where: { email: 'sofyan.agus18@gmail.com' },
         update: {},
         create: {
-            name: 'sofyan',
             email: 'sofyan.agus18@gmail.com',
-            role: 'administrator',
+            name: 'Admin',
+            role: 'admin',
         },
     })
-    console.log('  - Admin user seeded:', admin.email)
-}
 
+    console.log(`  - Admin user seeded: ${admin.email}`)
+    */
+}

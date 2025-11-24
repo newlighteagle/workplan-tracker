@@ -18,13 +18,22 @@ import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
+import { TrackerNav } from "@/components/tracker-nav"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from "@/components/ui/sidebar"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { ChevronRight } from "lucide-react"
+import * as LucideIcons from "lucide-react"
 
 // This is sample data.
 const data = {
@@ -36,24 +45,44 @@ const data = {
   teams: [
     {
       name: "Workplan App",
-      logo: GalleryVerticalEnd,
+      logo: LucideIcons.GalleryVerticalEnd,
       plan: "Enterprise",
     },
   ],
   projects: [],
 }
 
-export function AppSidebar({ menus, user, ...props }: React.ComponentProps<typeof Sidebar> & { menus: any[], user: any }) {
-  const navMain = menus.map((menu) => ({
-    title: menu.title,
-    url: menu.url,
-    icon: menu.icon === "PieChart" ? PieChart : Map, // Simple icon mapping for now
-    isActive: true,
-    items: menu.children.map((child: any) => ({
-      title: child.title,
-      url: child.url,
-    })),
-  }))
+interface District {
+  id: number
+  code: string
+  name: string
+  ics: Array<{
+    id: number
+    abbreviation: string | null
+    districtId: number
+  }>
+}
+
+export function AppSidebar({ menus, districts, user, ...props }: React.ComponentProps<typeof Sidebar> & { menus: any[], districts?: District[], user: any }) {
+  // Separate Tracker menu from other menus
+  const trackerMenu = menus.find((menu) => menu.title === "Tracker")
+  const otherMenus = menus.filter((menu) => menu.title !== "Tracker")
+
+  const navMain = otherMenus.map((menu) => {
+    // Get icon from lucide-react dynamically
+    const IconComponent = (LucideIcons as any)[menu.icon] || LucideIcons.Map
+
+    return {
+      title: menu.title,
+      url: menu.url,
+      icon: IconComponent,
+      isActive: true,
+      items: menu.children.map((child: any) => ({
+        title: child.title,
+        url: child.url,
+      })),
+    }
+  })
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -62,6 +91,29 @@ export function AppSidebar({ menus, user, ...props }: React.ComponentProps<typeo
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
+
+        {/* Tracker Menu with Dynamic Districts/ICS */}
+        {trackerMenu && districts && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Tracker</SidebarGroupLabel>
+            <SidebarMenu>
+              <Collapsible defaultOpen className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip="Tracker">
+                      <LucideIcons.ClipboardList />
+                      <span>Tracker</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <TrackerNav districts={districts} />
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user || data.user} />

@@ -93,48 +93,81 @@ model District {
 }
 
 model Ics {
-  id           Int           @id @default(autoincrement())
-  districtId   Int
-  district     District      @relation(fields: [districtId], references: [id])
-  code         String        @unique
-  fid          String?
-  abbreviation String?
-  name         String
-  description  String?
+  id            Int           @id @default(autoincrement())
+  districtId    Int
+  district      District      @relation(fields: [districtId], references: [id])
+  code          String        @unique
+  fid           String?
+  abbreviation  String?
+  name          String
+  description   String?
   icsActivities IcsActivity[]
+  icsDetail     IcsDetail?
+}
+
+model IcsDetail {
+  id          Int     @id @default(autoincrement())
+  icsId       Int     @unique
+  ics         Ics     @relation(fields: [icsId], references: [id])
+  description String? @db.Text
 }
 
 model Outcome {
   id          Int      @id @default(autoincrement())
+  code        String   @unique
   description String
-  target      String?
   outputs     Output[]
 }
 
 model Output {
   id          Int      @id @default(autoincrement())
-  outcomeId   Int
-  outcome     Outcome  @relation(fields: [outcomeId], references: [id])
+  code        String   @unique
+  outcomeCode String
+  outcome     Outcome  @relation(fields: [outcomeCode], references: [code], onDelete: Cascade, onUpdate: Cascade)
   description String
   activities  Activity[]
 }
 
 model Activity {
   id          Int      @id @default(autoincrement())
-  outputId    Int
-  output      Output   @relation(fields: [outputId], references: [id])
+  code        String   @unique
+  outputCode  String
+  output      Output   @relation(fields: [outputCode], references: [code], onDelete: Cascade, onUpdate: Cascade)
   name        String
+  description String
   startDate   DateTime
   endDate     DateTime
+  status      String   @default("active")
   icsActivities IcsActivity[]
+  actTrackers ActTracker[]
+}
+
+model ActTracker {
+  id          Int      @id @default(autoincrement())
+  actCode     String
+  activity    Activity @relation(fields: [actCode], references: [code], onDelete: Cascade, onUpdate: Cascade)
+  actDesc     String   @db.Text
+  period      String
+  deadline    String
+  plan        BigInt
+  actual      BigInt   @default(0)
+}
+
+model ProjectPeriod {
+  id     Int    @id @default(autoincrement())
+  code   String @unique
+  period String
+  active Boolean @default(true)
+  order  Int
+  note   String?
 }
 
 model IcsActivity {
-  id          Int      @id @default(autoincrement())
-  activityId  Int
-  activity    Activity @relation(fields: [activityId], references: [id])
-  icsId       Int
-  ics         Ics      @relation(fields: [icsId], references: [id])
+  id           Int      @id @default(autoincrement())
+  activityCode String
+  activity     Activity @relation(fields: [activityCode], references: [code], onDelete: Cascade, onUpdate: Cascade)
+  icsId        Int
+  ics          Ics      @relation(fields: [icsId], references: [id])
 }
 
 model Menu {
