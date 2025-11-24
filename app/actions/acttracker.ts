@@ -33,16 +33,18 @@ export async function createActTracker(data: {
     deadline: string
     plan: bigint
     actual: bigint
+    note?: string | null
 }) {
     try {
         await prisma.actTracker.create({
             data: {
-                actCode: data.actCode,
+                activity: { connect: { code: data.actCode } },
                 actDesc: data.actDesc,
                 period: data.period,
                 deadline: data.deadline,
                 plan: data.plan,
                 actual: data.actual,
+                note: data.note || null,
             },
         })
         revalidatePath("/dashboard/activity-tracker")
@@ -60,17 +62,19 @@ export async function updateActTracker(id: number, data: {
     deadline: string
     plan: bigint
     actual: bigint
+    note?: string | null
 }) {
     try {
         await prisma.actTracker.update({
             where: { id },
             data: {
-                actCode: data.actCode,
+                activity: { connect: { code: data.actCode } },
                 actDesc: data.actDesc,
                 period: data.period,
                 deadline: data.deadline,
                 plan: data.plan,
                 actual: data.actual,
+                note: data.note || null,
             },
         })
         revalidatePath("/dashboard/activity-tracker")

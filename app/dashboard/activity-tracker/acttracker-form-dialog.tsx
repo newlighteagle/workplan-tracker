@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
     Select,
     SelectContent,
@@ -32,6 +33,7 @@ interface ActTracker {
     deadline: string
     plan: bigint
     actual: bigint
+    note?: string | null
 }
 
 interface ActTrackerFormDialogProps {
@@ -50,6 +52,7 @@ export function ActTrackerFormDialog({ tracker, open, onOpenChange }: ActTracker
     const [activities, setActivities] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+    const [note, setNote] = useState("")
 
     useEffect(() => {
         async function fetchActivities() {
@@ -71,6 +74,7 @@ export function ActTrackerFormDialog({ tracker, open, onOpenChange }: ActTracker
             setDeadline(tracker.deadline)
             setPlan(tracker.plan.toString())
             setActual(tracker.actual.toString())
+            setNote(tracker.note || "")
         } else {
             setActCode("")
             setActDesc("")
@@ -78,6 +82,7 @@ export function ActTrackerFormDialog({ tracker, open, onOpenChange }: ActTracker
             setDeadline("")
             setPlan("")
             setActual("")
+            setNote("")
         }
     }, [tracker, open])
 
@@ -100,6 +105,7 @@ export function ActTrackerFormDialog({ tracker, open, onOpenChange }: ActTracker
             deadline,
             plan: BigInt(plan),
             actual: BigInt(actual),
+            note,
         }
         let result
 
@@ -200,6 +206,14 @@ export function ActTrackerFormDialog({ tracker, open, onOpenChange }: ActTracker
                                     required
                                 />
                             </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="note">Note</Label>
+                            <RichTextEditor
+                                value={note}
+                                onChange={setNote}
+                                placeholder="Optional note"
+                            />
                         </div>
                     </div>
                     <DialogFooter>
